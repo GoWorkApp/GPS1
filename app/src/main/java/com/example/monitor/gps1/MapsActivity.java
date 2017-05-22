@@ -19,6 +19,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -58,6 +60,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (location != null) {
             lat = location.getLatitude();
             lng = location.getLongitude();
+            FirebaseDatabase baseDatos = FirebaseDatabase.getInstance();
+            DatabaseReference coordenadas = baseDatos.getReference("coordenadas");
+            coordenadas.setValue(lat, lng);
             agregarMarcador(lat, lng);
         }
     }
