@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -23,6 +24,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -63,9 +66,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void actualizarUbicacion(Location location) {
         if (location != null) {
+
             lat = location.getLatitude();
             lng = location.getLongitude();
-
+            Coordenada miCoord = new Coordenada(lat,lng);
+            BackgroundDatabase x=new  BackgroundDatabase();
+            x.execute(miCoord);
             agregarMarcador(lat, lng);
         }
     }
@@ -103,6 +109,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         actualizarUbicacion(location);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,15000,0,locListener);
     }
+
+
+}
+
+class BackgroundDatabase extends AsyncTask<Coordenada,Long,List<Coordenada>>{
+
+
+
+    @Override
+    protected List doInBackground(Coordenada... params) {
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference("message");
+        myRef.setValue("Hello, World!");
+        return null;
+    }
+}
+
+
+class Coordenada{
+    double latitud;
+    double longitud;
+
+    public Coordenada() {
+
+    }
+
+    public Coordenada(double latitud, double longitud) {
+        this.latitud = latitud;
+        this.longitud = longitud;
+    }
+
+
+    public double getLatitud() {
+        return latitud;
+    }
+
+    public void setLatitud(double latitud) {
+        this.latitud = latitud;
+    }
+
+    public double getLongitud() {
+        return longitud;
+    }
+
+    public void setLongitud(double longitud) {
+        this.longitud = longitud;
+    }
+
 
 
 }
