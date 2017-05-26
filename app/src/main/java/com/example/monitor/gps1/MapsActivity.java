@@ -6,26 +6,33 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -34,6 +41,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Circle circulo;
     double lat = 0.0;
     double lng =0.0;
+    private DatabaseReference myRef;
+    private DatabaseReference usuario;
+    private HashMap<String,Coordenada> mimapa;
+    private List<Coordenada> lista=new ArrayList<>();
+    private List<Marker> marcadores=new ArrayList<>();
 
 
     @Override
@@ -50,7 +62,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        myRef = database.getReference("usuario");
+        usuario = myRef.push();
         miUbicacion();
+
     }
 
     private void agregarMarcador(double lat, double lng) {
@@ -69,9 +85,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             lat = location.getLatitude();
             lng = location.getLongitude();
-            Coordenada miCoord = new Coordenada(lat,lng);
-            BackgroundDatabase x=new  BackgroundDatabase();
-            x.execute(miCoord);
+            final Coordenada miCoord = new Coordenada(lat,lng);
+            usuario.setValue(miCoord);
+            myRef.addValueEventListener(new ValueEventListener() {
+                     @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                         //Object misdatos=dataSnapshot.getValue();
+                         for (DataSnapshot a :dataSnapshot.getChildren()){
+                           Coordenada coord=a.getValue(Coordenada.class);
+                             lista.add(coord);
+                         }
+                         for (int i=0; i<lista.size(); i++){
+
+                             System.out.println(lista.get(i));
+                         }
+                         /* if( misdatos instanceof HashMap){
+                           mimapa= (HashMap) misdatos;
+                          }
+                          Collection<Coordenada> c=mimapa.values();
+                          Set<String> k=mimapa.keySet();
+                         for(Coordenada x: c){
+                             System.out.println(x.getLatitud());
+                          }
+                          //Coordenada coords =  dataSnapshot.getValue(Coordenada.class);
+                          /* Collection<Coordenada> es = misdatos.values();
+                          for(Coordenada e : es){
+
+                            System.out.print(e.getLatitud());
+
+                         }*/
+
+              }
+
+              @Override
+              public void onCancelled(DatabaseError databaseError) {
+                    Log.w("TAG","Error");
+              }
+          });
+
             agregarMarcador(lat, lng);
         }
     }
@@ -107,24 +158,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         actualizarUbicacion(location);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,15000,0,locListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,0,locListener);
     }
 
 
 }
 
-class BackgroundDatabase extends AsyncTask<Coordenada,Long,List<Coordenada>>{
-
-
-
-    @Override
-    protected List doInBackground(Coordenada... params) {
-        FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference("message");
-        myRef.setValue("Hello, World!");
-        return null;
-    }
-}
 
 
 class Coordenada{
