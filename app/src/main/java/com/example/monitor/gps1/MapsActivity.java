@@ -43,8 +43,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     double lng =0.0;
     private DatabaseReference myRef;
     private DatabaseReference usuario;
-    private HashMap<String,Coordenada> mimapa;
-    private List<Coordenada> lista=new ArrayList<>();
+    private HashMap<String,LatLng> mimapa;
+    private List<LatLng> lista=new ArrayList<>();
     private List<Marker> marcadores=new ArrayList<>();
 
 
@@ -85,19 +85,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             lat = location.getLatitude();
             lng = location.getLongitude();
-            final Coordenada miCoord = new Coordenada(lat,lng);
+            final LatLng miCoord = new LatLng(lat,lng);
             usuario.setValue(miCoord);
             myRef.addValueEventListener(new ValueEventListener() {
                      @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
                          //Object misdatos=dataSnapshot.getValue();
                          for (DataSnapshot a :dataSnapshot.getChildren()){
-                           Coordenada coord=a.getValue(Coordenada.class);
+                           LatLng coord=a.getValue(LatLng.class);
                              lista.add(coord);
                          }
                          for (int i=0; i<lista.size(); i++){
+                            marcadores.add(mMap.addMarker((new MarkerOptions().position(lista.get(i)))));
 
-                             System.out.println(lista.get(i));
                          }
                          /* if( misdatos instanceof HashMap){
                            mimapa= (HashMap) misdatos;
@@ -165,7 +165,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 }
 
 
-
+/*
 class Coordenada{
     double latitud;
     double longitud;
@@ -199,3 +199,4 @@ class Coordenada{
 
 
 }
+*/
