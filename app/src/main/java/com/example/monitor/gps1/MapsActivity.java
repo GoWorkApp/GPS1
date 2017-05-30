@@ -10,14 +10,14 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.Circle;
-import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -28,24 +28,19 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private Marker marcador;
-    private Circle circulo;
-    double lat = 0.0;
-    double lng =0.0;
     private DatabaseReference myRef;
+    private List<Coordenada> listaUsuarios=new ArrayList<>();
     private DatabaseReference usuario;
-    private HashMap<String,LatLng> mimapa;
-    private List<LatLng> lista=new ArrayList<>();
     private List<Marker> marcadores=new ArrayList<>();
+    private Usuario user = new Usuario();
+
 
 
     @Override
@@ -69,51 +64,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    private void agregarMarcador(double lat, double lng) {
-        LatLng coordenadas = new LatLng(lat, lng);
-        CameraUpdate miUbicacion = CameraUpdateFactory.newLatLngZoom(coordenadas, 16);
-        if (marcador != null) marcador.remove();
-        if (circulo != null) circulo.remove();
-        marcador = mMap.addMarker(new MarkerOptions().position(coordenadas).title("Mi Posición"));
-        CircleOptions OpCirculo = new CircleOptions().center(new LatLng(lat,lng)).radius(100);
-        circulo = mMap.addCircle(OpCirculo);
-        mMap.animateCamera(miUbicacion);
+    private void miUbicacion() {
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            return;
+        }
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        actualizarUbicacion(location);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,0,locListener);
     }
+
+
 
     private void actualizarUbicacion(Location location) {
         if (location != null) {
 
-            lat = location.getLatitude();
-            lng = location.getLongitude();
-            final LatLng miCoord = new LatLng(lat,lng);
-            usuario.setValue(miCoord);
+            user.setMiCoord(new LatLng(location.getLatitude(),location.getLongitude()));
+            agregarMarcador();
+            usuario.setValue(user.getMiCoord());
             myRef.addValueEventListener(new ValueEventListener() {
                      @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                         //Object misdatos=dataSnapshot.getValue();
-                         for (DataSnapshot a :dataSnapshot.getChildren()){
-                           LatLng coord=a.getValue(LatLng.class);
-                             lista.add(coord);
-                         }
-                         for (int i=0; i<lista.size(); i++){
-                            marcadores.add(mMap.addMarker((new MarkerOptions().position(lista.get(i)))));
 
-                         }
-                         /* if( misdatos instanceof HashMap){
-                           mimapa= (HashMap) misdatos;
-                          }
-                          Collection<Coordenada> c=mimapa.values();
-                          Set<String> k=mimapa.keySet();
-                         for(Coordenada x: c){
-                             System.out.println(x.getLatitud());
-                          }
-                          //Coordenada coords =  dataSnapshot.getValue(Coordenada.class);
-                          /* Collection<Coordenada> es = misdatos.values();
-                          for(Coordenada e : es){
+                         listaUsuarios.clear();
+                        listaUsuarios=new ArrayList<Coordenada>();
+                       for (DataSnapshot a :dataSnapshot.getChildren()) {
 
-                            System.out.print(e.getLatitud());
+                               Coordenada x = a.getValue(Coordenada.class);
+                              user.setMapaHash((HashMap<String, Double>) a.getValue());
+                                x.setLatitud((Double) user.getMapaHash().get("latitude"));
+                                x.setLongitud((Double) user.getMapaHash().get("longitude"));
+                               listaUsuarios.add(x);
 
-                         }*/
+                       }
+
+
+                       agregarListaMarcadores();
 
               }
 
@@ -123,10 +111,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
               }
           });
 
-            agregarMarcador(lat, lng);
+
         }
     }
 
+    private void agregarMarcador() {
+        CameraUpdate miUbicacion = CameraUpdateFactory.newLatLngZoom(user.getMiCoord(), 16);
+        if (user.getMarcador() != null) user.getMarcador().remove();
+        user.setMarcador(mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))));
+        mMap.animateCamera(miUbicacion);
+    }
+
+
+    private void agregarListaMarcadores(){
+        if (marcadores.size()!=0){
+             for (int i=0; i<listaUsuarios.size();i++){
+                 marcadores.get(i).remove();
+             }
+            marcadores.clear();
+        }
+        for (int i=0; i<listaUsuarios.size(); i++){
+            marcadores.add(mMap.addMarker((new MarkerOptions().position(new LatLng(listaUsuarios.get(i).getLatitud(),listaUsuarios.get(i).getLongitud())))));
+        }
+    }
     LocationListener locListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
@@ -149,54 +156,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
-    private void miUbicacion() {
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-            return;
-        }
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        actualizarUbicacion(location);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,0,locListener);
+    private void disponible(View v){
+        mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
     }
-
+    private  void ocupado(View v){
+        mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+    }
 
 }
 
 
-/*
-class Coordenada{
-    double latitud;
-    double longitud;
-
-    public Coordenada() {
-
-    }
-
-    public Coordenada(double latitud, double longitud) {
-        this.latitud = latitud;
-        this.longitud = longitud;
-    }
-
-
-    public double getLatitud() {
-        return latitud;
-    }
-
-    public void setLatitud(double latitud) {
-        this.latitud = latitud;
-    }
-
-    public double getLongitud() {
-        return longitud;
-    }
-
-    public void setLongitud(double longitud) {
-        this.longitud = longitud;
-    }
-
-
-
-}
-*/
