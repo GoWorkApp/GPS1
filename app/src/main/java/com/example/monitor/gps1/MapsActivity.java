@@ -25,11 +25,13 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -40,7 +42,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private DatabaseReference usuario;
     private List<Marker> marcadores=new ArrayList<>();
     private Usuario user = new Usuario();
-
+    private Coordenada x;
+    private double lat,lng;
+    private String tag="a";
 
 
     @Override
@@ -58,7 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        myRef = database.getReference("usuario");
+        myRef = database.getReference("usuarios");
         usuario = myRef.push();
         miUbicacion();
 
@@ -80,45 +84,66 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void actualizarUbicacion(Location location) {
         if (location != null) {
-
-            user.setMiCoord(new LatLng(location.getLatitude(),location.getLongitude()));
+            lat = location.getLatitude();
+            lng=location.getLongitude();
+            x = new Coordenada(lat,lng);
             agregarMarcador();
-            usuario.setValue(user.getMiCoord());
-            myRef.addValueEventListener(new ValueEventListener() {
-                     @Override
+            usuario.setValue(x);
+            try{
+                Query qUsuario1 = FirebaseDatabase.getInstance().getReference().child("usuarios").orderByChild("etiqueta").equalTo(tag).limitToFirst(100);
+
+                qUsuario1.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        listaUsuarios.clear();
+                        for(DataSnapshot b : dataSnapshot.getChildren()){
+                            Coordenada usuario1 = b.getValue(Coordenada.class);
+                            listaUsuarios.add(usuario1);
+                        }
+                        agregarListaMarcadores();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+
+            }catch (Exception e) {
+                myRef.addValueEventListener(new ValueEventListener() {
+                    @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
 
-                         listaUsuarios.clear();
-                        listaUsuarios=new ArrayList<Coordenada>();
-                       for (DataSnapshot a :dataSnapshot.getChildren()) {
+                        listaUsuarios.clear();
+                        listaUsuarios=new ArrayList<>();
+                        for (DataSnapshot a :dataSnapshot.getChildren()) {
 
-                               Coordenada x = a.getValue(Coordenada.class);
-                              user.setMapaHash((HashMap<String, Double>) a.getValue());
-                                x.setLatitud((Double) user.getMapaHash().get("latitude"));
-                                x.setLongitud((Double) user.getMapaHash().get("longitude"));
-                               listaUsuarios.add(x);
+                            Coordenada usuario1 = a.getValue(Coordenada.class);
 
-                       }
+                            listaUsuarios.add(usuario1);
+                        }
 
 
-                       agregarListaMarcadores();
+                        agregarListaMarcadores();
 
-              }
+                    }
 
-              @Override
-              public void onCancelled(DatabaseError databaseError) {
-                    Log.w("TAG","Error");
-              }
-          });
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        Log.w("TAG","Error");
+                    }
+                });
+            }
+
 
 
         }
     }
 
     private void agregarMarcador() {
-        CameraUpdate miUbicacion = CameraUpdateFactory.newLatLngZoom(user.getMiCoord(), 16);
+        CameraUpdate miUbicacion = CameraUpdateFactory.newLatLngZoom(new LatLng(lat,lng), 16);
         if (user.getMarcador() != null) user.getMarcador().remove();
-        user.setMarcador(mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))));
+        user.setMarcador(mMap.addMarker(new MarkerOptions().position(new LatLng(lat,lng)).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))));
         mMap.animateCamera(miUbicacion);
     }
 
@@ -131,9 +156,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             marcadores.clear();
         }
         for (int i=0; i<listaUsuarios.size(); i++){
-            marcadores.add(mMap.addMarker((new MarkerOptions().position(new LatLng(listaUsuarios.get(i).getLatitud(),listaUsuarios.get(i).getLongitud())))));
+            marcadores.add(mMap.addMarker((new MarkerOptions().position(new LatLng(listaUsuarios.get(i).latitud,listaUsuarios.get(i).longitud)))));
         }
     }
+
     LocationListener locListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
@@ -156,11 +182,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
-    private void disponible(View v){
-        mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+    private void filtroA(View v){
+
     }
-    private  void ocupado(View v){
-        mMap.addMarker(new MarkerOptions().position(user.getMiCoord()).title("Mi Posición").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+    private  void filtroB(View v){
+
     }
 
 }

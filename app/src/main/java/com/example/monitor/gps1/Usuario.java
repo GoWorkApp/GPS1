@@ -3,25 +3,27 @@ package com.example.monitor.gps1;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 
-import java.util.ArrayList;
+
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+
 
 /**
  * Created by monitor on 29/05/2017.
  */
 
 public class Usuario {
-
-    private LatLng miCoord;
+    private String etiqueta="fds";
     private Marker marcador;
+    private LatLng miCoord;
     private HashMap<String,Double> mapaHash;
+
+
 
 
 
     public Usuario() {
     }
+
 
 
 
@@ -53,6 +55,14 @@ public class Usuario {
 
     public void setMarcador(Marker marcador) {
         this.marcador = marcador;
+    }
+
+    public String getEtiqueta() {
+        return etiqueta;
+    }
+
+    public void setEtiqueta(String etiqueta) {
+        this.etiqueta = etiqueta;
     }
 }
 
